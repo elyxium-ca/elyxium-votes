@@ -308,13 +308,49 @@ export default function RumbleCommunityPicks() {
     } catch {}
   };
 
-  const onVote = (id) => {
-    if (hasVotedFor(id)) return;
-    setVotes((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-    markVotedFor(id);
-    setJustVoted(id);
-    setTimeout(() => setJustVoted(null), 900);
+  const onVote = async (id) => {
+    try {
+      const res = await fetch("/api/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: id }),
+      });
+
+      if (!res.ok) throw new Error("Vote failed");
+
+      // Refresh live votes after DB insert
+      await fetchVotes();
+
+      setJustVoted(id);
+      setTimeout(() => setJustVoted(null), 900);
+    } catch (err) {
+      console.error("Vote failed", err);
+    }
   };
+
+  // Fetch all votes
+  const fetchVotes = async () => {
+    try {
+      const res = await fetch("/api/votes");
+      const data = await res.json();
+
+      const mapped = {};
+      data.forEach((row) => {
+        mapped[row.item_id] = Number(row.count); // ensure count is number
+      });
+
+      setVotes(mapped);
+    } catch (err) {
+      console.error("Fetch votes failed", err);
+    }
+  };
+
+  // Auto-refresh every 5s
+  useEffect(() => {
+    fetchVotes();
+    const interval = setInterval(fetchVotes, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const nextItem = () => {
     if (filtered.length === 0) return;
