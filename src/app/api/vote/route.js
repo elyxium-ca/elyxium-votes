@@ -9,6 +9,7 @@ const pool = new Pool({
 export async function POST(req) {
   try {
     const { itemId } = await req.json();
+
     if (!itemId) {
       return NextResponse.json({ error: "Missing itemId" }, { status: 400 });
     }
@@ -21,9 +22,6 @@ export async function POST(req) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Error inserting vote:", err);
-    return NextResponse.json(
-      { error: "Database insert failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Database insert failed" }, { status: 500 });
   }
 }

@@ -329,14 +329,17 @@ export default function RumbleCommunityPicks() {
   };
 
   // Fetch all votes
-  const fetchVotes = async () => {
+    const fetchVotes = async () => {
     try {
       const res = await fetch("/api/votes");
+      if (!res.ok) throw new Error("Fetch votes failed");
+
       const data = await res.json();
+      if (!Array.isArray(data)) throw new Error("Invalid data format");
 
       const mapped = {};
       data.forEach((row) => {
-        mapped[row.item_id] = Number(row.count); // ensure count is number
+        mapped[row.item_id] = Number(row.count);
       });
 
       setVotes(mapped);

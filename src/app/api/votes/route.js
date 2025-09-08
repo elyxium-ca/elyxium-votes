@@ -9,7 +9,7 @@ const pool = new Pool({
 export async function GET() {
   try {
     const result = await pool.query(`
-      SELECT item_id, COUNT(*)::int as count
+      SELECT item_id, COUNT(*) as count
       FROM votes_rmbl_tor
       GROUP BY item_id
     `);
@@ -17,9 +17,6 @@ export async function GET() {
     return NextResponse.json(result.rows);
   } catch (err) {
     console.error("Error fetching votes:", err);
-    return NextResponse.json(
-      { error: "Database query failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Database query failed" }, { status: 500 });
   }
 }
