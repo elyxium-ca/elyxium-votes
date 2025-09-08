@@ -203,7 +203,11 @@ function VoteCard({ item, count, onVote, disabled, onImageClick }) {
           <Button
             onClick={() => onVote(item.id)}
             disabled={disabled}
-            className="rounded-xl px-3 py-2 text-sm"
+            className={`rounded-xl px-3 py-2 text-sm transition-all duration-300 
+              ${disabled 
+                ? "opacity-60 cursor-not-allowed" 
+                : "hover:shadow-[0_0_20px_rgba(255,215,0,0.6)] hover:scale-[1.03]"}
+            `}
             style={{
               background: disabled
                 ? "rgba(212,175,55,0.25)"
@@ -211,7 +215,8 @@ function VoteCard({ item, count, onVote, disabled, onImageClick }) {
               color: BRAND.black,
             }}
           >
-            <ThumbsUp className="mr-1 h-4 w-4" /> Vote
+            <ThumbsUp className="mr-1 h-4 w-4" />{" "}
+            {disabled ? "Voted" : "Vote"}
           </Button>
         </div>
       </CardContent>
