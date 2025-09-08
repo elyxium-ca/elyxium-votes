@@ -21,7 +21,10 @@ export async function POST(req) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Error inserting vote:", err);
-    return NextResponse.json({ error: "Database insert failed" }, { status: 500 });
+    console.error("❌ Error inserting vote:", err);
+    return NextResponse.json(
+      { error: "Database insert failed", details: err.message },
+      { status: 500 }
+    );
   }
 }

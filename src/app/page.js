@@ -309,6 +309,12 @@ export default function RumbleCommunityPicks() {
   };
 
   const onVote = async (id) => {
+    if (hasVotedFor(id)) {
+      setToast("You already voted for this item ✅");
+      setTimeout(() => setToast(""), 2000);
+      return;
+    }
+
     try {
       const res = await fetch("/api/vote", {
         method: "POST",
@@ -318,13 +324,14 @@ export default function RumbleCommunityPicks() {
 
       if (!res.ok) throw new Error("Vote failed");
 
-      // Refresh live votes after DB insert
-      await fetchVotes();
-
+      markVotedFor(id); // 🔒 lock this device from voting again
+      await fetchVotes(); // refresh counts
       setJustVoted(id);
       setTimeout(() => setJustVoted(null), 900);
     } catch (err) {
       console.error("Vote failed", err);
+      setToast("Something went wrong ❌");
+      setTimeout(() => setToast(""), 2000);
     }
   };
 
