@@ -17,13 +17,10 @@ import {
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 
-// ——————————————————————————————————————————————
-// Elyxium • Community Picks — Rumble Edition
-// Premium, mobile-first voting page to crowdsource a machine planogram.
-// Palette: teal, gold, black, white (with subtle gradients + glass effect)
-// Background: Uploaded teal waves (Blue - Vertical.png)
-// ——————————————————————————————————————————————
 
+
+
+// Palette
 const BRAND = {
   teal: "#0C7C86",
   tealDark: "#085C63",
@@ -32,17 +29,15 @@ const BRAND = {
   white: "#FFFFFF",
 };
 
+// Categories order: Hydration → Energy → Protein Drinks → Snacks
 const CATEGORIES = [
+  { id: "hydration", label: "Hydration" },
   { id: "energy", label: "Energy Drinks" },
   { id: "protein-drink", label: "Protein Drinks" },
-  { id: "hydration", label: "Hydration" },
   { id: "snack", label: "Snacks" },
 ];
 
-// Naming for images (place files inside /public/products)
-// Filenames: all lowercase, hyphenated, no spaces, e.g. "alani-breezeberry-355.png".
-// Each item can include `img: "/products/<file>.png"`.
-
+// Items (as provided)
 const ITEMS = [
   // ——— ENERGY ———
   { id: "celsius-peach-vibe-355", name: "Celsius Energy • Peach Vibe 355 mL", category: "energy", img: "/products/celsius-peach-vibe-355.webp" },
@@ -89,7 +84,6 @@ const ITEMS = [
   { id: "fairlife-protein-vanilla-414", name: "Fairlife Protein Shake • Vanilla 414 mL", category: "protein-drink", img: "/products/fairlife-protein-vanilla-414.webp" },
   { id: "fairlife-protein-strawberry-414", name: "Fairlife Protein Shake • Strawberry 414 mL", category: "protein-drink", img: "/products/fairlife-protein-strawberry-414.webp" },
 
-
   // ——— HYDRATION ———
   { id: "fiji-500", name: "FIJI Water 500 mL", category: "hydration", img: "/products/fiji-500.png" },
   { id: "smartwater-591", name: "smartwater 591 mL", category: "hydration", img: "/products/smartwater-591.png" },
@@ -102,9 +96,8 @@ const ITEMS = [
   { id: "coconut-vita-330", name: "Vita Coco • Original Coconut Water 330 mL", category: "hydration", img: "/products/vita-coco-original-330.png" },
   { id: "coconut-thirsty-buddha-pineapple-355", name: "Thirsty Buddha • Sparkling Coconut Water Pineapple 355 mL", category: "hydration", img: "/products/thirsty-buddha-sparkling-pineapple-355.webp" },
   { id: "biosteel-blue-raspberry-500", name: "BioSteel Sports Drink • Blue Raspberry 500 mL", category: "hydration", img: "/products/biosteel-blue-raspberry-500.webp" },
-  { id: "biosteel-peach-mango-500", name: "BioSteel Sports Drink • Peach Mango 500 mL", category: "hydration", img: "/products/biosteel-peach-mango-500.webp" }, 
+  { id: "biosteel-peach-mango-500", name: "BioSteel Sports Drink • Peach Mango 500 mL", category: "hydration", img: "/products/biosteel-peach-mango-500.webp" },
   { id: "biosteel-white-freeze-500", name: "BioSteel Sports Drink • White Freeze 500 mL", category: "hydration", img: "/products/biosteel-white-freeze-500.webp" },
-
 
   // ——— SNACKS ———
   { id: "quest-bar-cookie-dough-60", name: "Quest Bar • Chocolate Chip Cookie Dough 60 g", category: "snack", img: "/products/quest-bar-cookie-dough-60.webp" },
@@ -130,33 +123,69 @@ const ITEMS = [
   { id: "prot-candy-tropical-55", name: "Protein Candy • Tropical Fruit 55 g", category: "snack", img: "/products/protein-candy-tropical-fruit-55.webp" },
 ];
 
-// ——————————————————————————————————————————————
-// Local persistence helpers
-// ——————————————————————————————————————————————
-const STORAGE_KEY = "elyxium-votes-rumble-v1";
+// Local storage (per-site)
+const STORAGE_KEY_BASE = "elyxium-votes";
+function getStorageKey(site) {
+  return `${STORAGE_KEY_BASE}-${site}-v1`;
+}
 
-function readVotes() {
+// Derive site slug in the browser (subdomain or /site/<slug>)
+function getSiteFromWindow() {
+  if (typeof window === "undefined") return "default";
+  const { hostname, pathname } = window.location;
+  const parts = hostname.split(".");
+  if (parts.length >= 4 && parts[1] === "votes" && parts[0] !== "www") {
+    return parts[0];
+  }
+  const segs = pathname.split("/").filter(Boolean);
+  const idx = segs.indexOf("site");
+  if (idx >= 0 && segs[idx + 1]) return segs[idx + 1];
+  return "default";
+}
+
+function readVotes(storageKey) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
   }
 }
 
-function writeVotes(obj) {
+function writeVotes(storageKey, obj) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    localStorage.setItem(storageKey, JSON.stringify(obj));
   } catch {}
 }
 
-// ——————————————————————————————————————————————
-// UI Helpers
-// ——————————————————————————————————————————————
+function hasVotedFor(storageKey, id) {
+  try {
+    const userKey = `${storageKey}-user`;
+    const raw = localStorage.getItem(userKey);
+    const voted = raw ? JSON.parse(raw) : {};
+    return Boolean(voted[id]);
+  } catch {
+    return false;
+  }
+}
+
+function markVotedFor(storageKey, id) {
+  try {
+    const userKey = `${storageKey}-user`;
+    const raw = localStorage.getItem(userKey);
+    const voted = raw ? JSON.parse(raw) : {};
+    voted[id] = true;
+    localStorage.setItem(userKey, JSON.stringify(voted));
+  } catch {}
+}
+
+// UI atoms
 function HeaderBadge({ children }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
-         style={{ borderColor: BRAND.gold, color: BRAND.gold }}>
+    <div
+      className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+      style={{ borderColor: BRAND.gold, color: BRAND.gold }}
+    >
       <Crown size={14} /> {children}
     </div>
   );
@@ -164,13 +193,12 @@ function HeaderBadge({ children }) {
 
 function Glass({ children, className = "" }) {
   return (
-    <div className={`backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl ${className}`}>{children}</div>
+    <div className={`backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl ${className}`}>
+      {children}
+    </div>
   );
 }
 
-// ——————————————————————————————————————————————
-// Card Component
-// ——————————————————————————————————————————————
 function VoteCard({ item, count, onVote, disabled, onImageClick }) {
   return (
     <Card className="overflow-hidden rounded-2xl bg-black/60 border-white/10">
@@ -180,34 +208,26 @@ function VoteCard({ item, count, onVote, disabled, onImageClick }) {
           onClick={onImageClick}
         >
           {item.img ? (
-            <img
-              src={item.img}
-              alt={item.name}
-              className="h-full w-full object-contain"
-            />
+            <img src={item.img} alt={item.name} className="h-full w-full object-contain" />
           ) : (
             <Star size={22} className="text-gray-500" />
           )}
         </div>
 
         <div className="flex-1">
-          <div className="text-white text-sm font-medium leading-tight">
-            {item.name}
-          </div>
+          <div className="text-white text-sm font-medium leading-tight">{item.name}</div>
           <div className="text-white/60 text-xs mt-1 capitalize">
             {item.category.replace("-", " ")}
           </div>
         </div>
+
         <div className="flex items-center gap-3">
           <div className="text-white/80 text-sm tabular-nums">{count || 0}</div>
           <Button
             onClick={() => onVote(item.id)}
             disabled={disabled}
             className={`rounded-xl px-3 py-2 text-sm transition-all duration-300 
-              ${disabled 
-                ? "opacity-60 cursor-not-allowed" 
-                : "hover:shadow-[0_0_20px_rgba(255,215,0,0.6)] hover:scale-[1.03]"}
-            `}
+              ${disabled ? "opacity-60 cursor-not-allowed" : "hover:shadow-[0_0_20px_rgba(255,215,0,0.6)] hover:scale-[1.03]"}`}
             style={{
               background: disabled
                 ? "rgba(212,175,55,0.25)"
@@ -215,8 +235,7 @@ function VoteCard({ item, count, onVote, disabled, onImageClick }) {
               color: BRAND.black,
             }}
           >
-            <ThumbsUp className="mr-1 h-4 w-4" />{" "}
-            {disabled ? "Voted" : "Vote"}
+            <ThumbsUp className="mr-1 h-4 w-4" /> {disabled ? "Voted" : "Vote"}
           </Button>
         </div>
       </CardContent>
@@ -224,20 +243,44 @@ function VoteCard({ item, count, onVote, disabled, onImageClick }) {
   );
 }
 
-// ——————————————————————————————————————————————
-// Main Page
-// ——————————————————————————————————————————————
-export default function RumbleCommunityPicks() {
+export default function CommunityPicks() {
+  // Site + storage key
+  const [site, setSite] = useState("default");
+  const [storageKey, setStorageKey] = useState(getStorageKey("default"));
+
+const [focusedIndex, setFocusedIndex] = useState(0);
+const gridRef = useRef(null);
+
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState("energy");
+  const [tab, setTab] = useState("hydration"); // default: Hydration
   const [votes, setVotes] = useState({});
   const [justVoted, setJustVoted] = useState(null);
   const [toast, setToast] = useState("");
-
   const [openIndex, setOpenIndex] = useState(null);
 
   const whyRef = useRef(null);
   const totalsRef = useRef(null);
+
+  useEffect(() => {
+    const s = getSiteFromWindow();
+    setSite(s);
+    setStorageKey(getStorageKey(s));
+  }, []);
+
+  // local cache load/save (per site)
+  useEffect(() => {
+    if (!storageKey) return;
+    setVotes(readVotes(storageKey));
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    writeVotes(storageKey, votes);
+  }, [storageKey, votes]);
+
+
+
+  
 
   const smoothScroll = (ref) => {
     if (!ref?.current) return;
@@ -249,8 +292,8 @@ export default function RumbleCommunityPicks() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "Elyxium • Rumble Community Picks",
-          text: "Vote for your favorite drinks and snacks at Rumble!",
+          title: `Elyxium • ${site} Community Picks`,
+          text: `Vote for your favorite drinks and snacks at ${site}!`,
           url,
         });
         setToast("Link shared ✨");
@@ -260,7 +303,7 @@ export default function RumbleCommunityPicks() {
       } else {
         setToast("Copy this link: " + url);
       }
-    } catch (err) {
+    } catch {
       try {
         await navigator.clipboard.writeText(url);
         setToast("Link copied ✅");
@@ -268,14 +311,6 @@ export default function RumbleCommunityPicks() {
     }
     setTimeout(() => setToast(""), 2200);
   };
-
-  useEffect(() => {
-    setVotes(readVotes());
-  }, []);
-
-  useEffect(() => {
-    writeVotes(votes);
-  }, [votes]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -292,45 +327,22 @@ export default function RumbleCommunityPicks() {
     return sorted;
   }, [votes]);
 
-  const hasVotedFor = (id) => {
-    try {
-      const userKey = `${STORAGE_KEY}-user`;
-      const raw = localStorage.getItem(userKey);
-      const voted = raw ? JSON.parse(raw) : {};
-      return Boolean(voted[id]);
-    } catch {
-      return false;
-    }
-  };
-
-  const markVotedFor = (id) => {
-    try {
-      const userKey = `${STORAGE_KEY}-user`;
-      const raw = localStorage.getItem(userKey);
-      const voted = raw ? JSON.parse(raw) : {};
-      voted[id] = true;
-      localStorage.setItem(userKey, JSON.stringify(voted));
-    } catch {}
-  };
-
   const onVote = async (id) => {
-    if (hasVotedFor(id)) {
+    if (hasVotedFor(storageKey, id)) {
       setToast("You already voted for this item ✅");
       setTimeout(() => setToast(""), 2000);
       return;
     }
-
     try {
       const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId: id }),
       });
-
       if (!res.ok) throw new Error("Vote failed");
 
-      markVotedFor(id); // 🔒 lock this device from voting again
-      await fetchVotes(); // refresh counts
+      markVotedFor(storageKey, id);
+      await fetchVotes();
       setJustVoted(id);
       setTimeout(() => setJustVoted(null), 900);
     } catch (err) {
@@ -340,20 +352,16 @@ export default function RumbleCommunityPicks() {
     }
   };
 
-  // Fetch all votes
-    const fetchVotes = async () => {
+  const fetchVotes = async () => {
     try {
       const res = await fetch("/api/votes");
       if (!res.ok) throw new Error("Fetch votes failed");
-
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Invalid data format");
-
       const mapped = {};
       data.forEach((row) => {
         mapped[row.item_id] = Number(row.count);
       });
-
       setVotes(mapped);
     } catch (err) {
       console.error("Fetch votes failed", err);
@@ -367,92 +375,102 @@ export default function RumbleCommunityPicks() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+  // keep the focused card in view when moving with arrows
+  const gridEl = gridRef.current;
+  if (!gridEl) return;
+  const card = gridEl.querySelector(`[data-idx="${focusedIndex}"]`);
+  if (card) card.scrollIntoView({ block: "nearest", inline: "nearest" });
+}, [focusedIndex]);
+
+
+useEffect(() => {
+  const handleKey = (e) => {
+    // If modal open, arrows switch items; Esc closes
+    if (openIndex !== null) {
+      if (e.key === "ArrowRight") nextItem();
+      else if (e.key === "ArrowLeft") prevItem();
+      else if (e.key === "Escape") setOpenIndex(null);
+      return;
+    }
+
+    // Modal not open: move focus across visible grid, Enter/Space opens modal
+    if (!filtered.length) return;
+
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      setFocusedIndex((i) => (i + 1) % filtered.length);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      setFocusedIndex((i) => (i - 1 + filtered.length) % filtered.length);
+    } else if (e.key === "Enter" || e.key === " ") {
+      setOpenIndex(focusedIndex);
+    }
+
+    // Modal not open: arrows move focus across the visible grid
+    if (filtered.length === 0) return;
+
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      setFocusedIndex((i) => (i + 1) % filtered.length);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      setFocusedIndex((i) => (i - 1 + filtered.length) % filtered.length);
+    } else if (e.key === "Enter" || e.key === " ") {
+      // open modal on focused card
+      setOpenIndex(focusedIndex);
+    }
+  };
+
+  window.addEventListener("keydown", handleKey);
+  return () => window.removeEventListener("keydown", handleKey);
+}, [openIndex, filtered, focusedIndex]);
+
   const nextItem = () => {
     if (filtered.length === 0) return;
     setOpenIndex((prev) => (prev + 1) % filtered.length);
   };
- 
-    const prevItem = () => {
+  const prevItem = () => {
     if (filtered.length === 0) return;
     setOpenIndex((prev) => (prev - 1 + filtered.length) % filtered.length);
   };
 
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (openIndex === null) return;
-      if (e.key === "ArrowRight") nextItem();
-      if (e.key === "ArrowLeft") prevItem();
-      if (e.key === "Escape") setOpenIndex(null);
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [openIndex, filtered]);
-
-  const bgUrl = "/Blue%20-%20Vertical.png"; // encode space for reliability
-
-return (
-  <div
-    className="min-h-screen w-full"
-    style={{
-      background: `radial-gradient(1200px 600px at 50% -10%, ${BRAND.gold}, ${BRAND.black})`,
-    }}
-  >
-    {/* Sticky Header */}
+  return (
     <div
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur border-b border-white/10"
-      style={{ background: "rgba(0,0,0,0.45)" }}
+      className="min-h-screen w-full"
+      style={{ background: `radial-gradient(1200px 600px at 50% -10%, ${BRAND.gold}, ${BRAND.black})` }}
     >
-      <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between">
-        {/* Left side (Logo + Name) */}
-        <a
-          href="https://www.elyxium.ca"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3"
-        >
-          <img
-            src="/images/logo.png"
-            alt="Elyxium Logo"
-            className="h-17 w-20 object-contain"
-          />
-
-        </a>
-
-        {/* Right side (Badge) */}
-        <HeaderBadge>Rumble • Premium Picks</HeaderBadge>
-      </div>
-    </div>
-
-    {/* Padding so content doesn’t overlap sticky header */}
-    <div className="pt-20"></div>
-
-    {/* Hero Section */}
-    <div className="mx-auto max-w-3xl px-4 pt-8 pb-4">
-      <div className="mt-6 text-white">
-        <h1 className="text-3xl font-bold leading-tight mb-4">
-          Your <span className="italic">choice</span>, your <span className="italic">fuel</span>
-        </h1>
-
-        <p className="text-white/80 text-sm leading-relaxed mb-2">
-          A <span className="font-semibold">new way</span> to fuel your workouts is here.  
-          <span className="font-semibold italic"> Vote</span> for your favorites drinks and snacks.
-        </p>
-        <p className="text-white/80 text-sm leading-relaxed">
-          Only the <span className="font-semibold">strongest</span> picks make it. 
-          <span className="italic"> Your studio, your rules.</span>
-        </p>
-
-        {/* Divider */}
-        <div className="border-t border-yellow-500/40 mt-4 mb-3"></div>
-
-        {/* Hint */}
-        <div className="flex items-center gap-2 text-white/60 text-xs">
-          <Info size={14} /> One tap = One Upvote per item (per device).
+      {/* Sticky Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur border-b border-white/10" style={{ background: "rgba(0,0,0,0.45)" }}>
+        <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between">
+          <a href="https://www.elyxium.ca" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3">
+            <img src="/images/logo.png" alt="Elyxium Logo" className="h-17 w-20 object-contain" />
+          </a>
+          <HeaderBadge>{site} • Premium Picks</HeaderBadge>
         </div>
       </div>
-    </div>
 
-      
+      <div className="pt-20"></div>
+
+      {/* Hero */}
+      <div className="mx-auto max-w-3xl px-4 pt-8 pb-4">
+        <div className="mt-6 text-white">
+          <h1 className="text-3xl font-bold leading-tight mb-4">
+            Vote for your products at {site}
+          </h1>
+
+          <p className="text-white/80 text-sm leading-relaxed mb-2">
+            A <span className="font-semibold">new way</span> to fuel your routine is here.
+            <span className="font-semibold italic"> Vote</span> for your favorite drinks and snacks.
+          </p>
+          <p className="text-white/80 text-sm leading-relaxed">
+            Only the <span className="font-semibold">strongest</span> picks make it.
+            <span className="italic"> Your space, your rules.</span>
+          </p>
+
+          <div className="border-t border-yellow-500/40 mt-4 mb-3"></div>
+
+          <div className="flex items-center gap-2 text-white/60 text-xs">
+            <Info size={14} /> One tap = One upvote per item (per device).
+          </div>
+        </div>
+      </div>
 
       {/* Top picks */}
       <div ref={totalsRef} className="mx-auto max-w-3xl px-4">
@@ -517,165 +535,148 @@ return (
           ))}
         </div>
       </div>
+{/* Grid */}
+<div
+  ref={gridRef}
+  className="mx-auto max-w-3xl px-4 mt-4 pb-24 grid grid-cols-1 gap-3"
+>
+  {filtered.map((item, idx) => (
+    <motion.div
+      key={item.id}
+      layout
+      data-idx={idx}
+      onMouseEnter={() => setFocusedIndex(idx)}
+      className={idx === focusedIndex ? "ring-2 ring-yellow-400/60 rounded-2xl" : ""}
+    >
+      <VoteCard
+        item={item}
+        count={votes[item.id]}
+        onVote={onVote}
+        disabled={hasVotedFor(storageKey, item.id)}
+        onImageClick={() => setOpenIndex(idx)}
+      />
+      <AnimatePresence>
+        {justVoted === item.id && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="mt-2 flex items-center gap-2 text-emerald-300 text-sm"
+          >
+            <CheckCircle size={16} /> Counted! Thanks for voting.
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  ))}
+</div>
 
-      {/* Grid */}
-        <div className="mx-auto max-w-3xl px-4 mt-4 pb-24 grid grid-cols-1 gap-3">
-                {filtered.map((item, idx) => (
-                  <motion.div key={item.id} layout>
-                    <VoteCard
-                      item={item}
-                      count={votes[item.id]}
-                      onVote={onVote}
-                      disabled={hasVotedFor(item.id)}
-                      onImageClick={() => setOpenIndex(idx)}
-                    />
-                    <AnimatePresence>
-                      {justVoted === item.id && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          className="mt-2 flex items-center gap-2 text-emerald-300 text-sm"
-                        >
-                          <CheckCircle size={16} /> Counted! Thanks for voting.
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                ))}
+      {/* Fullscreen Modal */}
+      <AnimatePresence>
+        {openIndex !== null && filtered[openIndex] && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setOpenIndex(null)}
+          >
+            <div
+              className="relative w-full max-w-md mx-auto bg-white rounded-2xl p-6 flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setOpenIndex(null)}
+                className="absolute top-3 right-3 z-10 text-black/60 hover:text-black"
+              >
+                ✕
+              </button>
+
+              <motion.img
+                src={filtered[openIndex].img}
+                alt={filtered[openIndex].name}
+                className="max-h-[50vh] object-contain mb-4"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                onDragEnd={(e, { offset, velocity }) => {
+                  if (offset.x < -100 || velocity.x < -500) nextItem();
+                  else if (offset.x > 100 || velocity.x > 500) prevItem();
+                }}
+              />
+
+              <div className="text-center mb-4">
+                <div className="text-black font-semibold text-sm">
+                  {filtered[openIndex].name}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  {filtered[openIndex].category.replace("-", " ")}
+                </div>
               </div>
 
-                    {/* Fullscreen Modal */}
-<AnimatePresence>
-  {openIndex !== null && filtered[openIndex] && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-      onClick={() => setOpenIndex(null)} // Backdrop closes
-    >
-      {/* Modal content (stops backdrop close) */}
-      <div
-        className="relative w-full max-w-md mx-auto bg-white rounded-2xl p-6 flex flex-col items-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button inside content, now works */}
-        <button
-          type="button"
-          onClick={() => setOpenIndex(null)}
-          className="absolute top-3 right-3 z-10 text-black/60 hover:text-black"
-        >
-          ✕
-        </button>
+              <Button
+                onClick={() => onVote(filtered[openIndex].id)}
+                disabled={hasVotedFor(storageKey, filtered[openIndex].id)}
+                className="rounded-xl px-4 py-2 text-sm"
+                style={{
+                  background: hasVotedFor(storageKey, filtered[openIndex].id)
+                    ? "rgba(212,175,55,0.25)"
+                    : `linear-gradient(135deg, ${BRAND.gold}, #f1d97a)`,
+                  color: BRAND.black,
+                }}
+              >
+                <ThumbsUp className="mr-1 h-4 w-4" />{" "}
+                {hasVotedFor(storageKey, filtered[openIndex].id) ? "Voted" : "Vote"}
+              </Button>
 
-        {/* Image with swipe */}
-        <motion.img
-          src={filtered[openIndex].img}
-          alt={filtered[openIndex].name}
-          className="max-h-[50vh] object-contain mb-4"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          onDragEnd={(e, { offset, velocity }) => {
-            if (offset.x < -100 || velocity.x < -500) {
-              nextItem();
-            } else if (offset.x > 100 || velocity.x > 500) {
-              prevItem();
-            }
-          }}
-        />
-
-        {/* Info */}
-        <div className="text-center mb-4">
-          <div className="text-black font-semibold text-sm">
-            {filtered[openIndex].name}
-          </div>
-          <div className="text-gray-500 text-xs">
-            {filtered[openIndex].category}
-          </div>
-        </div>
-
-        {/* Vote */}
-        <Button
-          onClick={() => onVote(filtered[openIndex].id)}
-          disabled={hasVotedFor(filtered[openIndex].id)}
-          className="rounded-xl px-4 py-2 text-sm"
-          style={{
-            background: hasVotedFor(filtered[openIndex].id)
-              ? "rgba(212,175,55,0.25)"
-              : `linear-gradient(135deg, ${BRAND.gold}, #f1d97a)`,
-            color: BRAND.black,
-          }}
-        >
-          <ThumbsUp className="mr-1 h-4 w-4" />{" "}
-          {hasVotedFor(filtered[openIndex].id) ? "Voted" : "Vote"}
-        </Button>
-
-        {/* Nav arrows */}
-        <div className="absolute inset-y-0 left-0 flex items-center">
-          <button
-            onClick={prevItem}
-            className="p-3 text-black/70 hover:text-black text-2xl"
-          >
-            ‹
-          </button>
-        </div>
-        <div className="absolute inset-y-0 right-0 flex items-center">
-          <button
-            onClick={nextItem}
-            className="p-3 text-black/70 hover:text-black text-2xl"
-          >
-            ›
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  )}
-</AnimatePresence>
-
-
-
+              <div className="absolute inset-y-0 left-0 flex items-center">
+                <button onClick={prevItem} className="p-3 text-black/70 hover:text-black text-2xl">‹</button>
+              </div>
+              <div className="absolute inset-y-0 right-0 flex items-center">
+                <button onClick={nextItem} className="p-3 text-black/70 hover:text-black text-2xl">›</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Why this matters */}
       <div id="why" ref={whyRef} className="mx-auto max-w-3xl px-4 pb-28">
-      <Glass className="p-5">
-        <div className="text-white text-base font-semibold">Why your vote matters</div>
-        <p className="text-white/80 text-sm mt-2">
-          At Rumble and Elyxium, <span className="font-semibold italic">you</span> come first.  
-          Every vote helps us keep your fridge stocked with the products you crave, 
-          the flavours that fuel <span className="font-semibold italic">your workouts</span> and the snacks you actually want on hand.  
-          It’s about building the perfect selection, together.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[
-            "More Fuel = Better Workouts",
-            "The Best Products, just for You",
-            "Seamless Grab & Go",
-            "A fridge curated by the Rumble Community",
-          ].map((b) => (
-            <div
-              key={b}
-              className="text-xs rounded-full px-3 py-1 border"
-              style={{ borderColor: BRAND.gold, color: BRAND.gold }}
+        <Glass className="p-5">
+          <div className="text-white text-base font-semibold">Why your vote matters</div>
+          <p className="text-white/80 text-sm mt-2">
+            At Elyxium, <span className="font-semibold italic">you</span> come first.
+            Every vote helps us keep your fridge stocked with the products you crave,
+            the flavours that fuel <span className="font-semibold italic">your workouts</span>, and the snacks you actually want on hand.
+            It’s about building the perfect selection, together.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              "More Fuel = Better Workouts",
+              "The Best Products, just for You",
+              "Seamless Grab & Go",
+              `A fridge curated by the ${site} community`,
+            ].map((b) => (
+              <div
+                key={b}
+                className="text-xs rounded-full px-3 py-1 border"
+                style={{ borderColor: BRAND.gold, color: BRAND.gold }}
+              >
+                {b}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={() => smoothScroll(totalsRef)}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium"
+              style={{ background: `linear-gradient(135deg, ${BRAND.gold}, #f1d97a)`, color: BRAND.black }}
             >
-              {b}
-            </div>
-          ))}
-        </div>
-        <div className="mt-4">
-          <button
-            onClick={() => smoothScroll(totalsRef)}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 font-medium"
-            style={{ background: `linear-gradient(135deg, ${BRAND.gold}, #f1d97a)`, color: BRAND.black }}
-          >
-            <BarChart2 size={16} /> See live votes
-          </button>
-        </div>
-      </Glass>
-
+              <BarChart2 size={16} /> See live votes
+            </button>
+          </div>
+        </Glass>
       </div>
 
-      {/* Sticky footer CTA */}
+      {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 backdrop-blur border-t border-white/10" style={{ background: "rgba(0,0,0,0.45)" }}>
         <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between">
           <div className="text-white text-sm flex items-center gap-2">

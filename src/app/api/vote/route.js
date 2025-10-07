@@ -1,30 +1,33 @@
-import { NextResponse } from "next/server";
-import { Pool } from "pg";
+// POST /api/vote  { itemId }
+export const dynamic = "force-dynamic";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+import { NextResponse } from "next/server";
+import { sql } from "@/lib/db";
+import { getSiteFromRequestHeaders } from "@/lib/getSite";
+
+
+
 
 export async function POST(req) {
   try {
-    const { itemId } = await req.json();
-
+    const { itemId, userHash } = await req.json();
     if (!itemId) {
       return NextResponse.json({ error: "Missing itemId" }, { status: 400 });
     }
 
-    await pool.query(
-      "INSERT INTO votes_rmbl_tor (item_id) VALUES ($1)",
-      [itemId]
-    );
+    const headers = req.headers;
+    const site = getSiteFromRequestHeaders(headers);
+    const ip = headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+    const ua = headers.get("user-agent") || null;
 
-    return NextResponse.json({ success: true });
+    await sql/*sql*/`
+      INSERT INTO pitch.votes (site_slug, item_id, user_hash, ip, user_agent)
+      VALUES (${site}, ${itemId}, ${userHash ?? null}, ${ip}, ${ua})
+    `;
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("❌ Error inserting vote:", err);
-    return NextResponse.json(
-      { error: "Database insert failed", details: err.message },
-      { status: 500 }
-    );
+    console.error("vote error", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

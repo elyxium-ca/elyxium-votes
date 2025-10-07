@@ -1,25 +1,28 @@
+// GET /api/votes  -> [{item_id, count}]
+
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
+import { sql } from "@/lib/db";
+import { getSiteFromRequestHeaders } from "@/lib/getSite";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
-export async function GET() {
+
+export async function GET(req) {
   try {
-    const result = await pool.query(`
-      SELECT item_id, COUNT(*)::int as count
-      FROM votes_rmbl_tor
-      GROUP BY item_id
-    `);
+    const site = getSiteFromRequestHeaders(req.headers);
 
-    return NextResponse.json(result.rows);
+    const rows = await sql/*sql*/`
+      SELECT item_id, COUNT(*)::int AS count
+      FROM pitch.votes
+      WHERE site_slug = ${site}
+      GROUP BY item_id
+      ORDER BY count DESC
+    `;
+
+    return NextResponse.json(rows);
   } catch (err) {
-    console.error("❌ Error fetching votes:", err);
-    return NextResponse.json(
-      { error: "Database query failed", details: err.message },
-      { status: 500 }
-    );
+    console.error("votes aggregate error", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
