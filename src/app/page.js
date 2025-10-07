@@ -334,10 +334,11 @@ const gridRef = useRef(null);
       return;
     }
     try {
-      const res = await fetch("/api/vote", {
+    const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: id }),
+
+      body: JSON.stringify({ itemId: id, site }), 
       });
       if (!res.ok) throw new Error("Vote failed");
 
@@ -354,7 +355,7 @@ const gridRef = useRef(null);
 
   const fetchVotes = async () => {
     try {
-      const res = await fetch("/api/votes");
+      const res = await fetch(`/api/votes?site=${encodeURIComponent(site)}`);
       if (!res.ok) throw new Error("Fetch votes failed");
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Invalid data format");

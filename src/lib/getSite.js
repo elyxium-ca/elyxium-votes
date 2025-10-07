@@ -1,9 +1,10 @@
-export function getSiteFromHost(hostname, path) {
+// src/lib/getSite.js
+export function getSiteFromHostAndPath(hostname, path) {
   if (!hostname) return "default";
-
   const parts = hostname.split(".");
-  // prod subdomain: <site>.votes.elyxium.ca
-  if (parts.length >= 4 && parts[1] === "votes" && parts[0] !== "www") {
+
+  // subdomain: <site>.votes.elyxium.ca or <site>.votes.localhost
+  if (parts.length >= 3 && parts[1] === "votes" && parts[0] !== "www") {
     return parts[0];
   }
 
@@ -17,8 +18,20 @@ export function getSiteFromHost(hostname, path) {
   return "default";
 }
 
-// ✅ Use the real request URL (works on Vercel + locally)
-export function getSiteFromRequest(req) {
+export function getSiteFromRequestUrl(req) {
+  // NOTE: req.url for API is like https://votes.elyxium.ca/api/vote (no /site/<slug>)
+  // so this alone won't find path-mode. We'll also try Referer in the routes.
   const { hostname, pathname } = new URL(req.url);
-  return getSiteFromHost(hostname, pathname);
+  return getSiteFromHostAndPath(hostname, pathname);
+}
+
+export function getSiteFromReferer(req) {
+  const ref = req.headers.get("referer");
+  if (!ref) return null;
+  try {
+    const { hostname, pathname } = new URL(ref);
+    return getSiteFromHostAndPath(hostname, pathname);
+  } catch {
+    return null;
+  }
 }
