@@ -1,17 +1,11 @@
-// GET /api/votes  -> [{item_id, count}]
-
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { getSiteFromRequestHeaders } from "@/lib/getSite";
-
-
+import { getSiteFromRequest } from "@/lib/getSite";
 
 export async function GET(req) {
   try {
-    const site = getSiteFromRequestHeaders(req.headers);
-
+    const site = getSiteFromRequest(req);            // <-- here
     const rows = await sql/*sql*/`
       SELECT item_id, COUNT(*)::int AS count
       FROM pitch.votes
@@ -19,7 +13,6 @@ export async function GET(req) {
       GROUP BY item_id
       ORDER BY count DESC
     `;
-
     return NextResponse.json(rows);
   } catch (err) {
     console.error("votes aggregate error", err);
